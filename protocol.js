@@ -53,6 +53,8 @@ var Protocol = function (dev) {
     });
 
     this.port.on('data', (data) => {
+        clearTimeout(this.timeoutTimer);
+        this.timeoutTimer = null;
         this.defer.resolve(data);
         this.defer = null;
         this.busy = false;
@@ -79,6 +81,17 @@ Protocol.prototype.send = function (data, defer) {
                 defer.reject(err);
             }
         });
+
+        this.timeoutTimer = setTimeout(() => {
+            debug('timeout check');
+            if (this.defer === defer) {
+                debug('timeout, reject');
+                defer.reject(new Error('timeout'));
+                this.busy = false;
+                this.defer = null;
+                this._queueSend();
+            }
+        }, 5 * 60 * 1000); // timeout
     }
 
     return defer.promise;
